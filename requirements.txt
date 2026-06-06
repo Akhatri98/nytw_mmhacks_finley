@@ -2,6 +2,8 @@
 # Install: pip install -r requirements.txt
 # After install, run: playwright install chromium
 
+fastapi==0.111.*
+uvicorn==0.30.*
 playwright==1.44.*
 supabase==2.5.*
 pydantic==2.7.*

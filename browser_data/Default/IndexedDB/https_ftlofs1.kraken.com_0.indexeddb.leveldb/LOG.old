@@ -1,0 +1,4 @@
+2026/06/06-14:08:59.113 e403 Reusing MANIFEST /Users/devrashie/Documents/csProjects/nytw_mmhacks_finley/browser_data/Default/IndexedDB/https_ftlofs1.kraken.com_0.indexeddb.leveldb/MANIFEST-000001
+2026/06/06-14:08:59.113 e403 Recovering log #16
+2026/06/06-14:08:59.113 e403 Reusing old log /Users/devrashie/Documents/csProjects/nytw_mmhacks_finley/browser_data/Default/IndexedDB/https_ftlofs1.kraken.com_0.indexeddb.leveldb/000016.log 
+2026/06/06-14:09:01.227 e403 Manual compaction at level-0 from '\x00\x0a\x00\x00\x00' @ 72057594037927935 : 1 .. '\x00\x0b\x00\x00\x00' @ 0 : 0; will stop at (end)

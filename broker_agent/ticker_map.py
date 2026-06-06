@@ -8,9 +8,13 @@ class KrakenPair(NamedTuple):
 
 
 # Expand this dict as new assets are needed.
+# url_slug uses the pair format shown in kraken.com/trade/<slug> URLs.
+# api_pair is the symbol used in Kraken's public REST API (?pair=<api_pair>).
+# Note: Kraken's REST API still uses XBT internally for Bitcoin; the result key
+# will be XXBTZUSD even when queried as XBTUSD.
 TICKER_MAP: dict[str, KrakenPair] = {
-    "BTC":   KrakenPair("XBT/USD",   "XBT-USD",   "XBTUSD"),
-    "XBT":   KrakenPair("XBT/USD",   "XBT-USD",   "XBTUSD"),
+    "BTC":   KrakenPair("BTC/USD",   "BTC-USD",   "XBTUSD"),
+    "XBT":   KrakenPair("BTC/USD",   "BTC-USD",   "XBTUSD"),
     "ETH":   KrakenPair("ETH/USD",   "ETH-USD",   "ETHUSD"),
     "SOL":   KrakenPair("SOL/USD",   "SOL-USD",   "SOLUSD"),
     "XRP":   KrakenPair("XRP/USD",   "XRP-USD",   "XRPUSD"),

@@ -1,26 +1,43 @@
 import os
 
+from dotenv import load_dotenv
 from supabase import AsyncClient, create_async_client
 
+load_dotenv()  # ensure .env is loaded even when this module is imported directly
+
 # Cache created clients so we don't spin up a fresh AsyncClient on every request.
-# Keyed by the API key used. This matters under Playwright's async event loop,
-# where repeated client creation can leak connections / loop bindings.
 _clients: dict[str, AsyncClient] = {}
 
 
+def _clean(value: str | None) -> str:
+    """Strip surrounding whitespace and quotes that shell/dotenv may leave behind."""
+    if not value:
+        return ""
+    return value.strip().strip('"').strip("'").strip()
+
+
 def _url() -> str:
-    return os.environ["SUPABASE_URL"]
+    v = _clean(os.environ.get("SUPABASE_URL", ""))
+    if not v:
+        raise KeyError("SUPABASE_URL is not set")
+    return v
 
 
 def _service_key() -> str:
-    key = os.environ.get("SUPABASE_SERVICE_ROLE_KEY") or os.environ.get("SUPABASE_SERVICE_KEY")
+    key = _clean(
+        os.environ.get("SUPABASE_SERVICE_ROLE_KEY")
+        or os.environ.get("SUPABASE_SERVICE_KEY")
+    )
     if not key:
         raise KeyError("SUPABASE_SERVICE_ROLE_KEY is not set")
     return key
 
 
 def _anon_key() -> str:
-    return os.environ["SUPABASE_ANON_KEY"]
+    key = _clean(os.environ.get("SUPABASE_ANON_KEY", ""))
+    if not key:
+        raise KeyError("SUPABASE_ANON_KEY is not set")
+    return key
 
 
 async def _get_or_create(key: str) -> AsyncClient:

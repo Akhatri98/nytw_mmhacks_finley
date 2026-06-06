@@ -1,7 +1,7 @@
 import logging
 
 from .models import ComplianceResult, TradeInstruction
-from .supabase_client import anon_client
+from .supabase_client import anon_client, service_client
 
 logger = logging.getLogger(__name__)
 
@@ -9,11 +9,17 @@ logger = logging.getLogger(__name__)
 async def check_compliance(instruction: TradeInstruction) -> ComplianceResult:
     """Query compliance_rules and evaluate against the proposed trade.
 
-    Uses the anon client + Clerk JWT so RLS returns:
+    With a Clerk JWT we use the anon client so RLS returns:
       - all scope='standard' rules (visible to any authenticated user)
       - only the requesting user's scope='user_defined' rules
+
+    Without a JWT (demo/test mode) we fall back to the service-role client,
+    which bypasses RLS, and filter user_defined rules in Python below.
     """
-    client = await anon_client(instruction.clerk_jwt)
+    if instruction.clerk_jwt:
+        client = await anon_client(instruction.clerk_jwt)
+    else:
+        client = await service_client()
 
     response = await (
         client.table("compliance_rules")
@@ -25,7 +31,7 @@ async def check_compliance(instruction: TradeInstruction) -> ComplianceResult:
     rules: list[dict] = response.data or []
     hard_blocks: list[dict] = []
     warnings: list[dict] = []
-    ticker_upper = instruction.ticker.upper().removesuffix("USD").removesuffix("/USD")
+    ticker_upper = instruction.ticker.upper().removesuffix("/USD").removesuffix("USD")
 
     for rule in rules:
         # Defensive guard: RLS should already filter these, but double-check.
@@ -35,7 +41,7 @@ async def check_compliance(instruction: TradeInstruction) -> ComplianceResult:
         # Skip if this rule targets specific tickers and ours isn't one of them.
         applies_to_tickers: list[str] = rule.get("applies_to_tickers") or []
         if applies_to_tickers:
-            normalised = [t.upper().removesuffix("USD").removesuffix("/USD") for t in applies_to_tickers]
+            normalised = [t.upper().removesuffix("/USD").removesuffix("USD") for t in applies_to_tickers]
             if ticker_upper not in normalised:
                 continue
 

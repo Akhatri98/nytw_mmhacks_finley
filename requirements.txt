@@ -1,12 +1,29 @@
+# ── Web server ───────────────────────────────────
 fastapi==0.111.*
-uvicorn==0.30.*
+uvicorn[standard]==0.30.*
+
+# ── Supabase (async client) ──────────────────────
+supabase==2.9.*
+
+# ── Gemini AI (chat + embeddings) ────────────────
+google-generativeai==0.8.*
+
+# ── Pinecone (vector store) ──────────────────────
+pinecone>=4.0,<6.0
+
+# ── Playwright (Kraken automation) ───────────────
 playwright==1.44.*
-supabase==2.5.*
-pydantic==2.7.*
+
+# ── HTTP client ──────────────────────────────────
 httpx==0.27.*
+
+# ── Data validation ──────────────────────────────
+pydantic==2.10.*
+
+# ── Environment ──────────────────────────────────
 python-dotenv==1.0.*
-bs4
-requests
+
+# ── Market Research data sources ─────────────────
 feedparser
-dotenv
-google-generativeai
+beautifulsoup4
+requests

@@ -56,6 +56,10 @@ import uuid
 from datetime import datetime, timezone
 from decimal import Decimal
 
+from dotenv import load_dotenv
+
+load_dotenv()  # ensure .env is available when broker_agent is imported standalone
+
 from .compliance import check_compliance
 from .kraken_playwright import place_order
 from .models import ComplianceResult, TradeInstruction, TradeResult
@@ -164,16 +168,31 @@ class BrokerAgent:
         self, screenshot_bytes: bytes, user_id: str, trade_id: str
     ) -> str | None:
         path = f"screenshots/{user_id}/{trade_id}.png"
+        public_url = (
+            f"{SUPABASE_URL}/storage/v1/object/public/{SCREENSHOT_BUCKET}/{path}"
+        )
         try:
             client = await service_client()
-            await client.storage.from_(SCREENSHOT_BUCKET).upload(
-                path=path,
-                file=screenshot_bytes,
-                file_options={"content-type": "image/png", "upsert": "true"},
-            )
-            public_url = (
-                f"{SUPABASE_URL}/storage/v1/object/public/{SCREENSHOT_BUCKET}/{path}"
-            )
+            storage = client.storage.from_(SCREENSHOT_BUCKET)
+            # supabase-py async storage: content-type goes in file_options; upsert
+            # is conveyed via the "upsert" header value. Wrapped so an upload
+            # failure (e.g. missing bucket) never aborts a successful trade.
+            try:
+                await storage.upload(
+                    path=path,
+                    file=screenshot_bytes,
+                    file_options={"content-type": "image/png", "upsert": "true"},
+                )
+            except Exception as inner:
+                # Fall back to overwriting via update if the object already exists.
+                logger.warning(
+                    "Screenshot upload retry via update (trade_id=%s): %s", trade_id, inner
+                )
+                await storage.update(
+                    path=path,
+                    file=screenshot_bytes,
+                    file_options={"content-type": "image/png"},
+                )
             logger.info("Screenshot uploaded → %s", public_url)
             return public_url
         except Exception as exc:
@@ -194,7 +213,8 @@ class BrokerAgent:
         row = {
             "id": trade_id,
             "user_id": instruction.user_id,
-            "ticker": instruction.ticker.upper().removesuffix("USD").removesuffix("/USD"),
+            # Strip "/USD" before "USD" so "ETH/USD" → "ETH" (not "ETH/").
+            "ticker": instruction.ticker.upper().removesuffix("/USD").removesuffix("USD"),
             "direction": instruction.direction,
             "quantity": str(instruction.quantity),
             # price_executed is NOT NULL in the schema; use "0" if unavailable

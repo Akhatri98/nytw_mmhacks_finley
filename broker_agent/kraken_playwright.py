@@ -25,9 +25,19 @@ from .ticker_map import KrakenPair, to_kraken_pair
 logger = logging.getLogger(__name__)
 
 # ── Configuration from env ──────────────────────────────────────────────────
-KRAKEN_EMAIL: str = os.environ["KRAKEN_EMAIL"]
-KRAKEN_PASSWORD: str = os.environ["KRAKEN_PASSWORD"]
+# Read lazily inside _perform_login so the module imports cleanly in DEMO_MODE
+# (where Kraken credentials are not required).
+KRAKEN_EMAIL: str = os.getenv("KRAKEN_EMAIL", "")
+KRAKEN_PASSWORD: str = os.getenv("KRAKEN_PASSWORD", "")
 HEADLESS: bool = os.getenv("HEADLESS", "false").lower() == "true"
+DEMO_MODE: bool = os.getenv("DEMO_MODE", "false").lower() == "true"
+
+# A 1×1 transparent PNG — used as a stand-in trade-confirmation screenshot in
+# DEMO_MODE so the full upload/record/send pipeline exercises real bytes.
+_DEMO_PNG: bytes = bytes.fromhex(
+    "89504e470d0a1a0a0000000d49484452000000010000000108060000001f15c489"
+    "000000000a49444154789c6260000000000200e221bc33000000000049454e44ae426082"
+)
 USER_DATA_DIR: str = os.getenv(
     "BROWSER_DATA_DIR",
     str(Path(__file__).parent.parent / "browser_data"),
@@ -61,6 +71,12 @@ async def _fetch_last_price_rest(api_pair: str) -> Decimal | None:
     except Exception as exc:
         logger.warning("Kraken REST price fetch failed: %s", exc)
         return None
+
+
+def _generate_demo_screenshot(ticker: str, direction: str, quantity: Decimal) -> bytes:
+    """Return placeholder PNG bytes for a simulated trade confirmation."""
+    logger.info("DEMO_MODE screenshot for %s %s %s", direction, quantity, ticker)
+    return _DEMO_PNG
 
 
 # ── Login helpers ─────────────────────────────────────────────────────────────
@@ -157,6 +173,27 @@ async def place_order(
     pair: KrakenPair = to_kraken_pair(ticker)
     trade_url = f"{KRAKEN_BASE}/trade/{pair.url_slug}"
     side_text = "Buy" if direction == "buy" else "Sell"
+
+    # ── DEMO_MODE: skip the browser entirely, return a simulated fill ─────────
+    if DEMO_MODE:
+        price = await _fetch_last_price_rest(pair.api_pair) or Decimal("50000")
+        logger.info(
+            "DEMO_MODE simulated order: %s %s %s @ %s", direction, quantity, ticker, price
+        )
+        return {
+            "price_executed": price,
+            "screenshot_bytes": _generate_demo_screenshot(ticker, direction, quantity),
+            "status": "executed",
+            "error": None,
+        }
+
+    if not (KRAKEN_EMAIL and KRAKEN_PASSWORD):
+        return {
+            "price_executed": None,
+            "screenshot_bytes": None,
+            "status": "failed",
+            "error": "KRAKEN_EMAIL / KRAKEN_PASSWORD not set (and DEMO_MODE is off).",
+        }
 
     Path(USER_DATA_DIR).mkdir(parents=True, exist_ok=True)
 

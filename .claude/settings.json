@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(.venv/bin/python -c \"import supabase; print\\('resolved to:', supabase.__file__\\); from supabase import create_async_client; print\\('create_async_client OK'\\)\")",
+      "Bash(timeout 120 .venv/bin/python -c \"from main import app; print\\('main:app imports OK'\\); print\\([r.path for r in app.routes if hasattr\\(r,'path'\\)]\\)\")",
+      "Bash(grep -v \"^$\")",
+      "Bash(git rm *)",
+      "Bash(.venv/bin/python -m py_compile config.py main.py broker_agent/*.py finley_agent/*.py gateway/*.py market_research_agent/*.py supabase/seed.py)",
+      "Bash(.venv/bin/uvicorn main:app --port 8011 --log-level warning)",
+      "Bash(grep -vE \"FutureWarning|google.generativeai package|updates or bug|switch to|github.com/google|^$|import google|See README\")"
+    ]
+  }
+}

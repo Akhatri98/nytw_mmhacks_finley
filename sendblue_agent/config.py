@@ -18,7 +18,7 @@ SENDBLUE_HEADERS = {
     "Content-Type": "application/json",
 }
 BASE_URL = "https://api.sendblue.co/api"
-
+SENDBLUE_SECRET = os.getenv("SENDBLUE_SECRET", "")
 # Execution Mode Flag
 LOCAL_MODE: bool = (
     "--terminal" in sys.argv
